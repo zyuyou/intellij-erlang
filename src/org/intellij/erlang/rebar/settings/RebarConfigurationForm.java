@@ -16,10 +16,15 @@
 
 package org.intellij.erlang.rebar.settings;
 
+import com.google.common.collect.ImmutableList;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
+import com.intellij.openapi.ui.popup.ListPopup;
+import com.intellij.openapi.ui.popup.PopupStep;
+import com.intellij.openapi.ui.popup.util.BaseListPopupStep;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.text.StringUtil;
@@ -30,6 +35,7 @@ import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.download.DownloadableFileDescription;
 import com.intellij.util.download.DownloadableFileService;
 import com.intellij.util.download.FileDownloader;
+import org.intellij.erlang.icons.ErlangIcons;
 import org.intellij.erlang.jps.model.JpsErlangSdkType;
 import org.intellij.erlang.utils.ExtProcessUtil;
 import org.jetbrains.annotations.NotNull;
@@ -101,28 +107,103 @@ public class RebarConfigurationForm {
 
   private void createUIComponents() {
     myLinkContainer = new JPanel(new BorderLayout());
+
+    final ImmutableList<PopupAction> popupActions = ImmutableList.of(
+      new PopupAction(ErlangIcons.REBAR, 1, "Rebar", "https://github.com/rebar/rebar/wiki/rebar") {
+        @Override
+        public void run() {
+          doDownloadAction(getLowerCaseTitle(), getUrl());
+        }
+      },
+      new PopupAction(ErlangIcons.REBAR, 2, "Rebar3", "https://s3.amazonaws.com/rebar3/rebar3"){
+        @Override
+        public void run() {
+          doDownloadAction(getLowerCaseTitle(), getUrl());
+        }
+      }
+    );
+
     ActionLink link = new ActionLink("Download the latest Rebar version", new AnAction() {
       @Override
       public void actionPerformed(AnActionEvent e) {
-        DownloadableFileService service = DownloadableFileService.getInstance();
-        DownloadableFileDescription rebar = service.createFileDescription("https://github.com/rebar/rebar/wiki/rebar", "rebar");
-        FileDownloader downloader = service.createDownloader(ContainerUtil.list(rebar), "rebar");
-        List<Pair<VirtualFile, DownloadableFileDescription>> pairs = downloader.downloadWithProgress(null, getEventProject(e), myLinkContainer);
-        if (pairs != null) {
-          for (Pair<VirtualFile, DownloadableFileDescription> pair : pairs) {
-            try {
-              String path = pair.first.getCanonicalPath();
-              if (path != null) {
-                FileUtilRt.setExecutableAttribute(path, true);
-                myRebarPathSelector.setText(path);
-                validateRebarPath();
-              }
-            } catch (Exception e1) { // Ignore
-            }
+        final ListPopup popup = JBPopupFactory.getInstance().createListPopup(new BaseListPopupStep<PopupAction>("Choose Rebar version", popupActions){
+          @NotNull
+          @Override
+          public String getTextFor(PopupAction value) {
+            return " " + value.myTitle + "  [" + value.myUrl + "]";
           }
-        }
+
+          @Override
+          public Icon getIconFor(PopupAction value) {
+            return value.myIcon;
+          }
+
+          @Override
+          public boolean hasSubstep(PopupAction selectedValue) {
+            return false;
+          }
+
+          @Override
+          public boolean isMnemonicsNavigationEnabled() {
+            return true;
+          }
+
+          @Override
+          public PopupStep onChosen(final PopupAction selectedValue, boolean finalChoice) {
+            return doFinalStep(new Runnable() {
+              @Override
+              public void run() {
+                selectedValue.run();
+              }
+            });
+          }
+        });
+        popup.showUnderneathOf(myLinkContainer);
       }
     });
+
     myLinkContainer.add(link, BorderLayout.NORTH);
+  }
+
+  private void doDownloadAction(String rebarName, String downloadUrl){
+    DownloadableFileService service = DownloadableFileService.getInstance();
+    DownloadableFileDescription rebar = service.createFileDescription(downloadUrl, rebarName);
+    FileDownloader downloader = service.createDownloader(ContainerUtil.list(rebar), rebarName);
+    List<Pair<VirtualFile, DownloadableFileDescription>> pairs = downloader.downloadWithProgress(null, null, myLinkContainer);
+    if(pairs != null){
+      for (Pair<VirtualFile, DownloadableFileDescription> pair: pairs){
+        try {
+          String path = pair.first.getCanonicalPath();
+          if(path != null){
+            FileUtilRt.setExecutableAttribute(path, true);
+            myRebarPathSelector.setText(path);
+            validateRebarPath();
+          }
+        }catch (Exception ignore){
+        }
+      }
+    }
+  }
+
+  private abstract static class PopupAction implements Runnable {
+    private Icon myIcon;
+    private Object myIndex;
+    private String myTitle;
+    private String myUrl;
+
+    protected PopupAction(Icon icon, Object index, String title, String url) {
+      myIcon = icon;
+      myIndex = index;
+      myTitle = title;
+      myUrl = url;
+    }
+
+    public String getLowerCaseTitle(){
+      return StringUtil.toLowerCase(myTitle);
+    }
+
+    public String getUrl() {
+      return myUrl;
+    }
   }
 }

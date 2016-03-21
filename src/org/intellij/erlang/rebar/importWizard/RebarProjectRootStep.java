@@ -120,8 +120,15 @@ final class RebarProjectRootStep extends ProjectImportWizardStep {
   @NotNull
   private static String getRebarPath(@Nullable String directory) {
     if (directory != null) {
+      // rebar2
       File rebar = new File(directory, "rebar");
       if (rebar.exists() && rebar.canExecute()) {
+        return rebar.getPath();
+      }
+
+      // rebar3
+      rebar = new File(directory, "rebar3");
+      if(rebar.exists() && rebar.canExecute()){
         return rebar.getPath();
       }
     }
@@ -133,6 +140,11 @@ final class RebarProjectRootStep extends ProjectImportWizardStep {
     try {
       GeneralCommandLine which = new GeneralCommandLine("which");
       which.addParameter("rebar");
+      output = ScriptRunnerUtil.getProcessOutput(which);
+
+      if(output.isEmpty()){
+        which.getParametersList().replaceOrAppend("rebar", "rebar3");
+      }
       output = ScriptRunnerUtil.getProcessOutput(which);
     } catch (Exception ignored) {
     }
