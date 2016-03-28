@@ -54,6 +54,7 @@ public interface ErlangIcons {
   Icon INCLUDE_ROOT = IconLoader.getIcon("/icons/includeRoot.png");
 
   Icon REBAR = IconLoader.getIcon("/icons/rebar-16.png");
+  Icon REBAR3 = IconLoader.getIcon("/icons/rebar3-16.png");
   Icon REBAR_MODULE_CONFLICT = AllIcons.Actions.Cancel;
   Icon REBAR_EUNIT = new LayeredIcon(REBAR, AllIcons.Nodes.JunitTestMark);
   Icon CONSOLE = IconLoader.getIcon("/icons/console.png");

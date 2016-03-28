@@ -31,6 +31,8 @@
     <projectStructureDetector implementation="org.intellij.erlang.editor.ErlangProjectStructureDetector"/>
     <projectImportProvider implementation="org.intellij.erlang.rebar.importWizard.RebarProjectImportProvider"/>
     <projectImportBuilder implementation="org.intellij.erlang.rebar.importWizard.RebarProjectImportBuilder"/>
+    <projectImportProvider implementation="org.intellij.erlang.rebar.importWizard.Rebar3ProjectImportProvider"/>
+    <projectImportBuilder implementation="org.intellij.erlang.rebar.importWizard.Rebar3ProjectImportBuilder"/>
     <projectOpenProcessor implementation="org.intellij.erlang.rebar.importWizard.RebarProjectOpenProcessor"/>
     <projectStructure.sourceRootEditHandler implementation="org.intellij.erlang.roots.ErlangIncludeSourceRootEditHandler"/>
     <compiler.buildTargetScopeProvider implementation="org.intellij.erlang.compilation.ErlangTargetScopeProvider"/>
