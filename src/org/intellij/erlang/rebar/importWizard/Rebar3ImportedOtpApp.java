@@ -176,7 +176,30 @@ final class Rebar3ImportedOtpApp {
   }
 
   private void addDependenciesFromRebarConfig(ErlangFile rebarConfig) {
-    myDeps.addAll(RebarConfigUtil.getDependencyAppNames(rebarConfig));
+    // myDeps.addAll(RebarConfigUtil.getDependencyAppNames(rebarConfig));
+    // `deps` which in the `rebar.config` for Rebar3 support `ErlangQAtom` and `NamedTuple`.
+    ErlangTermFileUtil.processConfigSection(rebarConfig, "deps", new Consumer<ErlangExpression>() {
+      @Override
+      public void consume(ErlangExpression deps) {
+        ErlangListExpression dependencyAppsList = deps instanceof ErlangListExpression ? (ErlangListExpression) deps : null;
+        if (dependencyAppsList != null) {
+          for (ErlangExpression depExpression : dependencyAppsList.getExpressionList()) {
+            ErlangQAtom depApp = PsiTreeUtil.getChildOfType(depExpression, ErlangQAtom.class);
+            if(depApp != null){
+              ErlangAtom appNameAtom = depApp.getAtom();
+              if(appNameAtom != null){
+                myDeps.add(appNameAtom.getName());
+              }
+            }else {
+              String depAppName = ErlangTermFileUtil.getNameOfNamedTuple(depExpression);
+              if(depAppName != null){
+                myDeps.add(depAppName);
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   private void addIncludePathsFromRebarConfig(ErlangFile rebarConfig) {

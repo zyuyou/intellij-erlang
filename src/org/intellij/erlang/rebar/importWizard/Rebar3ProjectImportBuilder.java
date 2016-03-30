@@ -79,7 +79,6 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
   private boolean myIsImportingProject;
 
   @Nullable private VirtualFile myProjectRoot = null;
-  @NotNull private List<Rebar3ImportedOtpApp> myProjectApps = Collections.emptyList();
   @NotNull private List<Rebar3ImportedOtpApp> myFoundOtpApps = Collections.emptyList();
   @NotNull private List<Rebar3ImportedOtpApp> mySelectedOtpApps = Collections.emptyList();
   @NotNull private String myRebarPath = "";
@@ -225,10 +224,10 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
               break;
             default:  // MY_APP
               if(myProjectRoot != null){
-                compilerModuleExt.setCompilerOutputPath(myProjectRoot.getPath() + File.separator + "_build" +
+                compilerModuleExt.setCompilerOutputPath(myProjectRoot + File.separator + "_build" +
                                                         File.separator + "default" + File.separator + "lib" +
                                                         File.separator + importedOtpApp.getName() + File.separator + "ebin");
-                compilerModuleExt.setCompilerOutputPathForTests(myProjectRoot.getPath() + File.separator + "_build" +
+                compilerModuleExt.setCompilerOutputPathForTests(myProjectRoot + File.separator + "_build" +
                                                                 File.separator + "test" + File.separator + "lib" +
                                                                 File.separator + importedOtpApp.getName() + File.separator + "test");
               }else{
@@ -273,10 +272,10 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
 
     myProjectRoot = projectRoot;
     if(!unitTestMode && projectRoot instanceof VirtualDirectoryImpl){
-      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild("_build");
-      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild("_checkouts");
-      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild("apps");
-      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild("lib");
+      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild(_build_DIR_NAME);
+      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild(_checkouts_DIR_NAME);
+      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild(apps_DIR_NAME);
+      ((VirtualDirectoryImpl) projectRoot).refreshAndFindChild(lib_DIR_NAME);
     }
 
     ProgressManager.getInstance().run(new Task.Modal(getCurrentProject(), "Scanning Rebar3 projects", true){
@@ -284,17 +283,6 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
       public void run(@NotNull final ProgressIndicator indicator) {
         LinkedHashSet<Rebar3ImportedOtpApp> importedOtpApps = findOtpApps(myProjectRoot, indicator);
         myFoundOtpApps = ContainerUtil.newArrayList(importedOtpApps);
-      }
-    });
-
-    Collections.sort(myFoundOtpApps, new Comparator<Rebar3ImportedOtpApp>() {
-      @Override
-      public int compare(@NotNull Rebar3ImportedOtpApp o1, @NotNull Rebar3ImportedOtpApp o2) {
-        int nameCompareResult = String.CASE_INSENSITIVE_ORDER.compare(o1.getName(), o2.getName());
-        if(nameCompareResult == 0){
-          return String.CASE_INSENSITIVE_ORDER.compare(o1.getRoot().getPath(), o2.getRoot().getPath());
-        }
-        return nameCompareResult;
       }
     });
 
@@ -309,8 +297,7 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
 
     final LinkedHashSet<Rebar3ImportedOtpApp> foundOtpApps = new LinkedHashSet<Rebar3ImportedOtpApp>();
 
-    // find projectRoot rebar.config, if don't exist, stop find others.
-    VirtualFile projectRootRebarConfig = projectRoot.findChild("rebar.config");
+    // find projectRoot rebar.config, if that don't exist, stop finding others.
     Rebar3ImportedOtpApp projectRootApp = createImportedOtpApp(Rebar3ImportedOtpApp.AppType.MY_APP, projectRoot);
     if(projectRootApp == null){
       return foundOtpApps;
@@ -340,13 +327,6 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
       }
     }
 
-    // _checkouts
-    appTypes[0] = Rebar3ImportedOtpApp.AppType.DEP_APP;
-    VirtualFile _checkoutsDir = projectRoot.findChild(_checkouts_DIR_NAME);
-    if(_checkoutsDir != null){
-      VfsUtilCore.visitChildrenRecursively(_checkoutsDir, visitor);
-    }
-
     // apps
     appTypes[0] = Rebar3ImportedOtpApp.AppType.MY_APP;
     VirtualFile appsDir = projectRoot.findChild(apps_DIR_NAME);
@@ -359,6 +339,13 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
     VirtualFile libDir = projectRoot.findChild(lib_DIR_NAME);
     if(libDir != null){
       VfsUtilCore.visitChildrenRecursively(libDir, visitor);
+    }
+
+    // _checkouts
+    appTypes[0] = Rebar3ImportedOtpApp.AppType.DEP_APP;
+    VirtualFile _checkoutsDir = projectRoot.findChild(_checkouts_DIR_NAME);
+    if(_checkoutsDir != null){
+      VfsUtilCore.visitChildrenRecursively(_checkoutsDir, visitor);
     }
 
     // _build
@@ -375,10 +362,6 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
     return foundOtpApps;
   }
 
-  private boolean isExamplesDirectory(VirtualFile virtualFile){
-    return "examples".equals(virtualFile.getName()) && !myImportExamples;
-  }
-
   private static boolean isGitMetaDataDirectory(String directoryName){
     return directoryName.equals(".git");
   }
@@ -390,8 +373,10 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
       return new Rebar3ImportedOtpApp(appType, appRoot, appResourceFile);
     }
 
-    if(appRoot.findChild(apps_DIR_NAME) != null ||
-       (appRoot.getName().equals(_build_DIR_NAME) && appRoot.findChild(lib_DIR_NAME) != null)){
+    // `rebar.config` and (`apps` or `lib`) in projectRoot
+    if(appRoot.findChild("rebar.config") != null &&
+       (appRoot.findChild(apps_DIR_NAME) != null ||
+        (!appRoot.getName().equals(_build_DIR_NAME) && appRoot.findChild(lib_DIR_NAME) != null))){
 
       return new Rebar3ImportedOtpApp(appRoot);
     }
@@ -537,7 +522,7 @@ public class Rebar3ProjectImportBuilder extends ProjectImportBuilder<Rebar3Impor
   }
 
   private static boolean isSdkOtpApp(@NotNull String otpAppName, @NotNull Sdk sdk) {
-    Pattern appDirNamePattern = Pattern.compile(otpAppName + "-.*");
+    Pattern appDirNamePattern = Pattern.compile("^" + otpAppName + "-.*");
     for (VirtualFile srcSdkDir : sdk.getRootProvider().getFiles(OrderRootType.SOURCES)) {
       for (VirtualFile child : srcSdkDir.getChildren()) {
         if (child.isDirectory() && appDirNamePattern.matcher(child.getName()).find()) {

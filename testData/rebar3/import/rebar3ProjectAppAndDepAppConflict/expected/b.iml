@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root inherit-compiler-output="false">
+  <output url="file://$MODULE_DIR$/../../_build/default/lib/b/ebin" />
+  <output-test url="file://$MODULE_DIR$/../../_build/test/lib/b/test" />
+  <exclude-output />
+  <content url="file://$MODULE_DIR$">
+    <sourceFolder url="file://$MODULE_DIR$/include" type="erlang-include" />
+  </content>
+  <orderEntry type="inheritedJdk" />
+  <orderEntry type="sourceFolder" forTests="false" />
+</root>
